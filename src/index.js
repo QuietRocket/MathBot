@@ -14,20 +14,11 @@ function render(input) {
 
 (async () => {
     const browser = await chromium.launch({ headless: true });
-    const page = await browser.newPage({ viewport: { height: 500, width: 1000 } });
+    const context = await browser.newContext({
+        viewport: { height: 500, width: 1000 }
+    });
 
-    let output;
-
-    try {
-        output = katex.renderToString(process.argv[2], {
-            displayMode: true,
-            output: 'html'
-        });
-    } catch {
-        process.exit();
-    }
-
-    await page.route(
+    await context.route(
         (url) => url.host === 'latex.bot'
     , async (route, request) => {
         const uri = url.parse(request.url());
@@ -52,9 +43,7 @@ function render(input) {
                             }
                         </style>
                     </head>
-                    <body>
-                        ${output}
-                    </body>
+                    <body></body>
                 </html>
                 `,
                 contentType: 'text/html'
@@ -70,7 +59,24 @@ function render(input) {
         }
     });
 
+    const page = await context.newPage();
+
+    let output;
+
+    try {
+        output = katex.renderToString(process.argv[2], {
+            displayMode: true,
+            output: 'html'
+        });
+    } catch {
+        process.exit();
+    }
+
     await page.goto('http://latex.bot');
+
+    await page.evaluate((text) => {
+        document.body.innerHTML = text;
+    }, output);
 
     const clip = await page.evaluate(() => {
         const { height, width, x, y } = document.getElementsByClassName('base')[0].getBoundingClientRect()
