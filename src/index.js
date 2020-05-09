@@ -4,67 +4,49 @@ const katex = require('katex');
 const path = require('path');
 const url = require('url');
 
-function configureBrowser() {
-
-}
-
-function render(input) {
-    
-}
-
-(async () => {
+async function configureBrowser() {
     const browser = await chromium.launch({ headless: true });
     const context = await browser.newContext({
-        viewport: { height: 500, width: 1000 }
+        viewport: { height: 1000, width: 1000 }
     });
 
     await context.route(
         (url) => url.host === 'latex.bot'
-    , async (route, request) => {
-        const uri = url.parse(request.url());
-        if (uri.path === '/') {
-            const size = 4
-            route.fulfill({
-                body: `
-                <!DOCTYPE html>
-                <html>
-                    <head>
-                        <meta charset="utf-8" />
-                        <link rel="stylesheet" href="katex.min.css" />
-                        <style>
-                            .katex {
-                                font-size: ${size}em;
-                                color: white;
-                            }
+        , async (route, request) => {
+            const uri = url.parse(request.url());
+            const match = uri.path.match(/^\/katex(.*)/)
+            if (match) {
+                route.fulfill({
+                    path: path.join(
+                        __dirname,
+                        '../node_modules/katex/dist',
+                        match[1]
+                    )
+                });
+            } else {
+                route.fulfill({
+                    path: path.join(
+                        __dirname,
+                        "../static",
+                        uri.path
+                    )
+                });
+            }
+        });
 
-                            .base {
-                                padding: ${size/16}em ${size/8}em;
-                                box-sizing: content-box;
-                            }
-                        </style>
-                    </head>
-                    <body></body>
-                </html>
-                `,
-                contentType: 'text/html'
-            });
-        } else {
-            route.fulfill({
-                path: path.join(
-                    __dirname,
-                    '../node_modules/katex/dist',
-                    uri.path
-                )
-            });
-        }
-    });
+    return {
+        browser,
+        context
+    }
+}
 
+async function render(context, input) {
     const page = await context.newPage();
 
     let output;
 
     try {
-        output = katex.renderToString(process.argv[2], {
+        output = katex.renderToString(input, {
             displayMode: true,
             output: 'html'
         });
@@ -72,14 +54,14 @@ function render(input) {
         process.exit();
     }
 
-    await page.goto('http://latex.bot');
+    await page.goto('http://latex.bot/page.html');
 
     await page.evaluate((text) => {
         document.body.innerHTML = text;
     }, output);
 
     const clip = await page.evaluate(() => {
-        const { height, width, x, y } = document.getElementsByClassName('base')[0].getBoundingClientRect()
+        const { height, width, x, y } = document.getElementsByClassName('katex-html')[0].getBoundingClientRect()
         return { height, width, x, y };
     });
 
@@ -89,5 +71,18 @@ function render(input) {
         clip
     })
 
-    await browser.close();
+    await page.close();
+}
+
+(async () => {
+    const { browser, context } = await configureBrowser();
+
+    require('readline').createInterface({
+        input: process.stdin,
+        output: process.stdout
+    }).on('line', (input) => {
+        render(context, input);
+    }).on('close', () => {
+        browser.close();
+    })
 })()
