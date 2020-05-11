@@ -1,8 +1,8 @@
-const { chromium } = require('playwright');
-const katex = require('katex');
+import { chromium, Route, Request, ChromiumBrowserContext } from 'playwright';
+import katex from 'katex';
 
-const path = require('path');
-const url = require('url');
+import path from 'path';
+import url from 'url';
 
 async function configureBrowser() {
     const browser = await chromium.launch({ headless: true });
@@ -11,9 +11,11 @@ async function configureBrowser() {
     });
 
     await context.route(
-        (url) => url.host === 'latex.bot'
-        , async (route, request) => {
+        () => true,
+        async (route: Route, request: Request) => {
             const uri = url.parse(request.url());
+            if (uri.path === null)
+                return;
             const match = uri.path.match(/^\/katex(.*)/)
             if (match) {
                 route.fulfill({
@@ -40,7 +42,7 @@ async function configureBrowser() {
     }
 }
 
-async function render(context, input) {
+async function render(context: ChromiumBrowserContext, input: string) {
     const page = await context.newPage();
 
     let output;
@@ -80,7 +82,7 @@ async function render(context, input) {
     require('readline').createInterface({
         input: process.stdin,
         output: process.stdout
-    }).on('line', (input) => {
+    }).on('line', (input: string) => {
         render(context, input);
     }).on('close', () => {
         browser.close();
