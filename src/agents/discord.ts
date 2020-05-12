@@ -24,37 +24,42 @@ export default class DiscordAgent extends LatexAgent {
         if (!this.initialized)
             await this.init();
 
-        this.client.on('message', async (msg) => {
-            if (!(msg.channel instanceof TextChannel))
-                return;
-                
-            if  (!this.targets.hasOwnProperty(msg.guild.id))
-                return;
-            
-            const guild = this.targets[msg.guild.id] as string[];
-            if (guild.indexOf(msg.channel.id) === -1)
-                return;
+        this.client
+            .on('message', async (msg) => {
+                if (!(msg.channel instanceof TextChannel))
+                    return;
 
-            const match = msg.content.match(/\.tex (.*)/);
-            if (!match)
-                return;
+                if (!this.targets.hasOwnProperty(msg.guild.id))
+                    return;
 
-            try {
-                const result = await this.render(match[1]);
-                const options: MessageOptions = {
-                    files: [
-                        result
-                    ]
+                const guild = this.targets[msg.guild.id] as string[];
+                if (guild.indexOf(msg.channel.id) === -1)
+                    return;
+
+                const match = msg.content.match(/\.tex (.*)/);
+                if (!match)
+                    return;
+
+                try {
+                    const result = await this.render(match[1]);
+                    const options: MessageOptions = {
+                        files: [
+                            result
+                        ]
+                    }
+                    msg.reply(options);
+                } catch (e) {
+                    if (e instanceof ParseError)
+                        msg.reply('```\n' + e.message + '\n```');
+                    else
+                        console.error(e);
                 }
-                msg.reply(options);
-            } catch (e) {
-                if (e instanceof ParseError)
-                    msg.reply('```\n' + e.message + '\n```');
-                else
-                    console.error(e);
-            }
-        });
-        
+            })
+            .on('disconnect', async () => {
+                await this.destroy();
+                await this.client.destroy();
+            })
+
         this.client.login(this.token);
     }
 
