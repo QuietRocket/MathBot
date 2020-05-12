@@ -25,7 +25,7 @@ export default class DiscordAgent extends LatexAgent {
             await this.init();
 
         this.client.on('message', async (msg) => {
-            if (!(msg instanceof TextChannel))
+            if (!(msg.channel instanceof TextChannel))
                 return;
                 
             if  (!this.targets.hasOwnProperty(msg.guild.id))
