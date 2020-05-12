@@ -3,6 +3,7 @@ import LatexAgent from '../latex';
 import path from 'path';
 import { promises as fs } from 'fs';
 import { createInterface } from 'readline';
+import { ParseError } from 'katex';
 
 export default class ReplAgent extends LatexAgent {
     async start() {
@@ -16,7 +17,10 @@ export default class ReplAgent extends LatexAgent {
                 const result = await this.render(input);
                 await fs.writeFile(path.join(__dirname, `../../output/${Date.now()}.png`), result);
             } catch (e) {
-                console.error(e);
+                if (e instanceof ParseError)
+                    console.error(e.message);
+                else
+                    throw e;
             }
         }).on('close', () => {
             this.destroy();
