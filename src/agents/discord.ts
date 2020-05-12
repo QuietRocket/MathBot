@@ -1,4 +1,4 @@
-import { Client, DMChannel, MessageOptions } from 'discord.js';
+import { Client, MessageOptions, TextChannel } from 'discord.js';
 
 import LatexAgent from '../latex';
 
@@ -25,7 +25,10 @@ export default class DiscordAgent extends LatexAgent {
             await this.init();
 
         this.client.on('message', async (msg) => {
-            if (!this.targets.hasOwnProperty(msg.guild.id))
+            if (!(msg instanceof TextChannel))
+                return;
+                
+            if  (!this.targets.hasOwnProperty(msg.guild.id))
                 return;
             
             const guild = this.targets[msg.guild.id] as string[];
@@ -46,7 +49,7 @@ export default class DiscordAgent extends LatexAgent {
                 msg.reply(options);
             } catch (e) {
                 if (e instanceof ParseError)
-                    msg.reply(e.message);
+                    msg.reply('```\n' + e.message + '\n```');
                 else
                     console.error(e);
             }
