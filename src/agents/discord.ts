@@ -1,4 +1,8 @@
-import { Client, MessageOptions, TextChannel } from 'discord.js';
+import {
+    Client,
+    MessageOptions,
+    TextChannel
+} from 'discord.js';
 
 import LatexAgent from '../latex';
 

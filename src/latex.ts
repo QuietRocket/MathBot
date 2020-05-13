@@ -5,19 +5,19 @@ import {
     Route,
     Request
 } from 'playwright';
-import katex from 'katex';
+import { renderToString } from 'katex';
 import path from 'path';
 import url from 'url';
 
 export default abstract class LatexAgent {
     private browser?: ChromiumBrowser;
     private context?: ChromiumBrowserContext;
-    
+
     protected get initialized(): boolean {
         return this.browser !== undefined && this.context !== undefined;
     }
 
-    protected async init() {        
+    protected async init() {
         this.browser = await chromium.launch({ headless: true });
         this.context = await this.browser.newContext();
 
@@ -49,9 +49,7 @@ export default abstract class LatexAgent {
     }
 
     protected async render(expression: string): Promise<Buffer> {
-        let output: string;
-
-        output = katex.renderToString(expression, {
+        let output: string = renderToString(expression, {
             displayMode: true,
             output: 'html'
         });
@@ -68,8 +66,8 @@ export default abstract class LatexAgent {
         }, output);
 
         const clip = await page.evaluate(() => {
-            const { height, width, x, y } = document.getElementsByClassName('katex-html')[0].getBoundingClientRect()
-            return { height, width, x, y };
+            const { x, y, width, height } = document.getElementsByClassName('katex-html')[0].getBoundingClientRect()
+            return { x, y, width, height };
         });
 
         const buffer = await page.screenshot({
