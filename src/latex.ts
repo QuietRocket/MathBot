@@ -4,7 +4,7 @@ import {
     chromium,
     Route,
     Request
-} from 'playwright';
+} from 'playwright-chromium';
 import { renderToString } from 'katex';
 import path from 'path';
 import url from 'url';
@@ -65,6 +65,8 @@ export default abstract class LatexAgent {
         await page.evaluate((text) => {
             document.body.innerHTML = text;
         }, output);
+
+        await (new Promise((resolve) => setTimeout(resolve, 100)));
 
         const clip = await page.evaluate(() => {
             const { x, y, width, height } = document.getElementsByClassName('katex-html')[0].getBoundingClientRect()
