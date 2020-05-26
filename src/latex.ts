@@ -12,13 +12,14 @@ import url from 'url';
 export default abstract class LatexAgent {
     private browser?: ChromiumBrowser;
     private context?: ChromiumBrowserContext;
+    private debug: boolean = false;
 
     protected get initialized(): boolean {
         return this.browser !== undefined && this.context !== undefined;
     }
 
     protected async init() {
-        this.browser = await chromium.launch({ headless: true });
+        this.browser = await chromium.launch({ headless: !this.debug });
         this.context = await this.browser.newContext();
 
         await this.context.route(
@@ -75,7 +76,8 @@ export default abstract class LatexAgent {
             clip
         });
 
-        await page.close();
+        if (!this.debug)
+            await page.close();
 
         return buffer;
     }
@@ -89,5 +91,9 @@ export default abstract class LatexAgent {
             await this.browser.close();
             this.browser = undefined;
         }
+    }
+
+    public setDebug(value?: boolean): void {
+        this.debug = value !== undefined ? value : !this.debug;
     }
 }
