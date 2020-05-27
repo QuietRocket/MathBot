@@ -1,5 +1,5 @@
 import DiscordAgent, { DiscordTargets } from './agents/discord';
-import { config } from './config';
+import { config } from '../config';
 
 export interface Configuration {
     token: string;

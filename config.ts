@@ -1,4 +1,4 @@
-import { Configuration } from './index';
+import { Configuration } from './src/index';
 
 export const config: Configuration = {
     // Discord bot token
