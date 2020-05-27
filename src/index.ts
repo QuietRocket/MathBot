@@ -1,10 +1,13 @@
-// import ReplAgent from './agents/repl'
-// const repl = new ReplAgent();
-// repl.start();
+import DiscordAgent, { DiscordTargets } from './agents/discord';
+import { config } from './config';
 
-import DiscordAgent from './agents/discord';
+export interface Configuration {
+    token: string;
+    targets: DiscordTargets;
+    pruneInterval: number;
+}
 
-(async () => {
-    const discord = new DiscordAgent('');
+(() => {
+    const discord = new DiscordAgent(config.token, config.targets, config.pruneInterval);
     discord.start();
-})()
+})();
