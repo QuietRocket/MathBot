@@ -1,3 +1,10 @@
+<div align="center">
+    <img
+        width="180"
+        src="https://github.com/QuietRocket/MathBot/raw/master/assets/clipped.png"
+    />
+</div>
+
 # MathBot
 MathBot is a LaTeX rendering Discord bot based on KaTeX
 
