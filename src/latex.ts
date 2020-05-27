@@ -19,7 +19,10 @@ export default abstract class LatexAgent {
     }
 
     protected async init() {
-        this.browser = await chromium.launch({ headless: !this.debug });
+        this.browser = await chromium.launch({
+            headless: !this.debug,
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
         this.context = await this.browser.newContext();
 
         await this.context.route(
