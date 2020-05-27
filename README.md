@@ -42,5 +42,6 @@ This renderer leverages web technologies internally in order to make it light we
 4. The portion of the web page containing the rendered LaTeX is then screenshotted with a transparent background.
 5. The screenshot is then returned as an image buffer, where it can then be saved, sent through discord.js.
 
-## Note
-Since the content is trustworthy (all requests are redirected) the chromium instance isn't run in a sandbox, as documented in [Playwright troubleshooting documentation](https://github.com/microsoft/playwright/blob/master/docs/troubleshooting.md#setting-up-chrome-linux-sandbox).
+## Notes
+- Since the content is trustworthy (all requests are redirected locally) the chromium instance isn't run in a sandbox, as documented in [Playwright troubleshooting documentation](https://github.com/microsoft/playwright/blob/master/docs/troubleshooting.md#setting-up-chrome-linux-sandbox).
+- Required system packages are referenced from Playwright's [Dockerfile.bionic](https://github.com/microsoft/playwright/blob/master/docs/docker/Dockerfile.bionic).
