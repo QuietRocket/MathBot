@@ -23,9 +23,13 @@ After configuring the bot, while inside the project root, build the image with:
 ```
 docker build -t mathbot .
 ```
-and run with:
+and run interactively with:
 ```
 docker run --rm -it mathbot
+```
+or run in detatched mode with:
+```
+docker run --rm -d mathbot
 ```
 
 ## Dependencies
