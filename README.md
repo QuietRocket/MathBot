@@ -1,6 +1,6 @@
 <div align="center">
     <img
-        style="max-width: 10em;"
+        width="180"
         src="https://github.com/QuietRocket/MathBot/raw/master/assets/clipped.png"
     />
 </div>
