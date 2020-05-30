@@ -52,11 +52,11 @@ export default abstract class LatexAgent {
             });
     }
 
-    protected async render(expression: string): Promise<Buffer> {
-        let output: string = renderToString(expression, {
+    protected async render(expressions: string[]): Promise<Buffer> {
+        let outputs: string[] = expressions.map(expression => renderToString(expression, {
             displayMode: true,
             output: 'html'
-        });
+        }));
 
         if (!this.initialized)
             throw new Error('Agent not initialzed.')
@@ -65,14 +65,17 @@ export default abstract class LatexAgent {
 
         await page.goto('http://latex.bot/page.html');
 
-        await page.evaluate((text) => {
-            document.body.innerHTML = text;
-        }, output);
+        await page.evaluate((outputs) => {
+            const container = document.createElement('div');
+            container.innerHTML = outputs.join('\n');
+            container.classList.add('container');
+            document.body.appendChild(container);
+        }, outputs);
 
         await (new Promise((resolve) => setTimeout(resolve, 100)));
 
         const clip = await page.evaluate(() => {
-            const { x, y, width, height } = document.getElementsByClassName('katex-html')[0].getBoundingClientRect()
+            const { x, y, width, height } = document.getElementsByClassName('container')[0].getBoundingClientRect();
             return { x, y, width, height };
         });
 

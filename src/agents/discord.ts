@@ -67,12 +67,14 @@ export default class DiscordAgent extends LatexAgent {
     private async handleMessage(content: string): Promise<MessageOptions | string | null> {
         let reply: MessageOptions | string | null = null;
 
-        const match = content.match(/\.tex (.*)/);
-        if (!match)
+        const matches = content.matchAll(/\$(.+?)\$/g);
+        const expressions = Array.from(matches).map((match) => match[1]);
+
+        if (expressions.length === 0)
             return reply;
 
         try {
-            const result = await this.render(match[1]);
+            const result = await this.render(expressions);
             reply = {
                 files: [
                     result

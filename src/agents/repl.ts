@@ -13,8 +13,10 @@ export default class ReplAgent extends LatexAgent {
             input: process.stdin,
             output: process.stdout
         }).on('line', async (input: string) => {
+            const matches = input.matchAll(/\$(.+?)\$/g);
+            const expressions = Array.from(matches).map((match) => match[1]);
             try {
-                const result = await this.render(input);
+                const result = await this.render(expressions);
                 await fs.writeFile(path.join(__dirname, `../../output/${Date.now()}.png`), result);
             } catch (e) {
                 if (e instanceof ParseError)
