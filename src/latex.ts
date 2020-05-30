@@ -52,12 +52,14 @@ export const LatexEngine = async (debug?: boolean) => {
     
             await page.goto('http://latex.bot/page.html');
     
-            await page.evaluate((outputs) => {
+            await page.evaluate((args) => {
                 const container = document.createElement('div');
-                container.innerHTML = outputs.join('\n');
+                container.innerHTML = args.outputs.join('\n');
                 container.classList.add('container');
+                if (args.debug)
+                    container.classList.add('debug');
                 document.body.appendChild(container);
-            }, outputs);
+            }, { outputs, debug });
     
             await (new Promise((resolve) => setTimeout(resolve, 100)));
     
