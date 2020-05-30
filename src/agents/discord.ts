@@ -6,65 +6,59 @@ import {
     TextChannel
 } from 'discord.js';
 
-import LatexAgent from '../latex';
+import { LatexEngine } from '../latex';
 
 import { ParseError } from 'katex';
+
+export interface DiscordConfig {
+    token: string;
+    targets: DiscordTargets;
+    pruneInterval: number;
+}
 
 export interface DiscordTargets {
     [key: string]: string[];
 }
 
-export default class DiscordAgent extends LatexAgent {
-    private token: string;
-    private client: Client;
-    private targets: DiscordTargets;
-    private pruneInterval: number;
-    private messageMap: Map<string, Message>;
-    private timeout: ReturnType<typeof setTimeout> | null;
+export const DiscordAgent = async (config: DiscordConfig, debug?: boolean) => {
+    const engine = await LatexEngine(debug);
+    const client = new Client();
+    const messageMap: Map<string, Message> = new Map();
+    let timeout: ReturnType<typeof setTimeout> | null = null;
 
-    constructor(token: string, targets: DiscordTargets, pruneInterval: number) {
-        super();
-        this.token = token;
-        this.client = new Client();
-        this.targets = targets;
-        this.pruneInterval = pruneInterval;
-        this.messageMap = new Map();
-        this.timeout = null;
-    }
-
-    private pruneMap() {
-        if (this.messageMap.size === 0)
+    const pruneMap = () => {
+        if (messageMap.size === 0)
             return;
 
         const now = Date.now();
 
-        Array.from(this.messageMap.entries())
+        Array.from(messageMap.entries())
             .filter((value) => {
                 const delta = now - value[1].createdTimestamp;
-                return delta / 1000 >= 60 * this.pruneInterval;
+                return delta / 1000 >= 60 * config.pruneInterval;
             })
             .forEach((value) => {
-                this.messageMap.delete(value[0]);
+                messageMap.delete(value[0]);
             });
-        
-        if (this.messageMap.size === 0) {
-            this.timeout = null;
+
+        if (messageMap.size === 0) {
+            timeout = null;
             return;
         }
-        
-        const oldest = Math.min.apply(null, Array.from(this.messageMap.values()).map((message) => message.createdTimestamp));
-        const next = 60 * this.pruneInterval - (now - oldest) / 1000
-        
-        this.timeout = setTimeout(() => this.pruneMap(), 1000 * next);
+
+        const oldest = Math.min.apply(null, Array.from(messageMap.values()).map((message) => message.createdTimestamp));
+        const next = 60 * config.pruneInterval - (now - oldest) / 1000
+
+        timeout = setTimeout(() => pruneMap(), 1000 * next);
     }
 
-    private trackMessage(id: string, message: Message) {
-        this.messageMap.set(id, message);
-        if (this.timeout === null)
-            this.timeout = setTimeout(() => this.pruneMap(), 1000 * 60 * this.pruneInterval);
+    const trackMessage = (id: string, message: Message) => {
+        messageMap.set(id, message);
+        if (timeout === null)
+            timeout = setTimeout(() => pruneMap(), 1000 * 60 * config.pruneInterval);
     }
 
-    private async handleMessage(content: string): Promise<MessageOptions | string | null> {
+    const handleMessage = async (content: string): Promise<MessageOptions | string | null> => {
         let reply: MessageOptions | string | null = null;
 
         const matches = content.matchAll(/\$(.+?)\$/g);
@@ -74,7 +68,7 @@ export default class DiscordAgent extends LatexAgent {
             return reply;
 
         try {
-            const result = await this.render(expressions);
+            const result = await engine.render(expressions);
             reply = {
                 files: [
                     result
@@ -90,71 +84,71 @@ export default class DiscordAgent extends LatexAgent {
         }
     }
 
-    private shouldIgnore(msg: Message | PartialMessage): boolean {
+    const shouldIgnore = (msg: Message | PartialMessage): boolean => {
         if (
             !(msg.channel instanceof TextChannel) ||
             msg.guild === null ||
-            !this.targets.hasOwnProperty(msg.guild.id) ||
+            !config.targets.hasOwnProperty(msg.guild.id) ||
             msg.author === null ||
-            this.client.user === null ||
-            msg.author.id === this.client.user.id
+            client.user === null ||
+            msg.author.id === client.user.id
         )
             return true;
 
-        const guild = this.targets[msg.guild.id];
+        const guild = config.targets[msg.guild.id];
         if (guild.indexOf(msg.channel.id) === -1)
             return true;
 
         return false;
     }
 
-    private async sendResult(msg: Message | PartialMessage) {
+    const sendResult = async (msg: Message | PartialMessage) => {
         if (msg.content === null)
             return;
 
-        const result = await this.handleMessage(msg.content);
+        const result = await handleMessage(msg.content);
 
         if (result === null)
             return;
 
         const reply = await msg.channel.send(result);
 
-        this.trackMessage(msg.id, reply);
+        trackMessage(msg.id, reply);
     }
 
-    async start() {
-        if (!this.initialized)
-            await this.init();
+    return {
+        start() {
+            client
+                .on('message', async (msg) => {
+                    if (shouldIgnore(msg))
+                        return;
 
-        this.client
-            .on('message', async (msg) => {
-                if (this.shouldIgnore(msg))
-                    return;
+                    await sendResult(msg);
+                })
+                .on('messageUpdate', async (_, msg) => {
+                    const id = msg.id;
+                    if (!messageMap.has(id) || msg.content === null)
+                        return;
 
-                await this.sendResult(msg);
-            })
-            .on('messageUpdate', async (_, msg) => {
-                if (!this.messageMap.has(msg.id) || msg.content === null)
-                    return;
-                
-                await this.messageMap.get(msg.id)!.delete();
+                    await messageMap.get(id)!.delete();
 
-                await this.sendResult(msg);
-            })
-            .on('messageDelete', async (msg) => {
-                const id = msg.id;
-                if (!this.messageMap.has(id))
-                    return;
+                    await sendResult(msg);
+                })
+                .on('messageDelete', async (msg) => {
+                    const id = msg.id;
+                    if (!messageMap.has(id))
+                        return;
 
-                await this.messageMap.get(id)!.delete();
-                this.messageMap.delete(id);
-            })
-            .on('disconnect', async () => {
-                await this.destroy();
-                this.client.destroy();
-            })
+                    await messageMap.get(id)!.delete();
+                    messageMap.delete(id);
+                })
+                .on('disconnect', async () => {
+                    await engine.destroy();
+                    client.destroy();
+                })
 
-        this.client.login(this.token);
-    }
+            client.login(config.token);
+        }
 
+    };
 }

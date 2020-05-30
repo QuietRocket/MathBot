@@ -1,6 +1,6 @@
-import { Configuration } from './src/index';
+import { DiscordConfig } from './src/agents/discord';
 
-export const config: Configuration = {
+export const config: DiscordConfig = {
     // Discord bot token
     token: 'insert token here',
     // A map of all targets the bot should listen to
