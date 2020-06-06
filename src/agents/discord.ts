@@ -4,7 +4,9 @@ import {
     Message,
     PartialMessage,
     TextChannel,
-    DMChannel
+    DMChannel,
+    MessageReaction,
+    User
 } from 'discord.js';
 
 import { LatexEngine } from '../latex';
@@ -25,6 +27,10 @@ export interface DiscordTargets {
 export interface Confess {
     moderation: string;
     output: string;
+    messageVerify: string;
+    messageVerifyTimeout: number;
+    messageCancel: string;
+    messageSent: string;
 }
 
 export const DiscordAgent = async (config: DiscordConfig, debug?: boolean) => {
@@ -128,7 +134,8 @@ export const DiscordAgent = async (config: DiscordConfig, debug?: boolean) => {
     const emojis = {
         'check': '✅',
         'cross': '🚫',
-        'send': '📨'
+        'send': '📨',
+        'thumb': '👍',
     }
 
     return {
@@ -171,19 +178,37 @@ export const DiscordAgent = async (config: DiscordConfig, debug?: boolean) => {
                         throw Error('Couldn\'t resolve confession channels.');
                 })
                 .on('message', async (msg) => {
-                    if (!(msg.channel instanceof DMChannel))
+                    if (!(msg.channel instanceof DMChannel) || msg.author.bot)
                         return;
 
-                    let message = await modChannel.send(msg.content);
+                    const verify = await msg.channel.send(config.confess.messageVerify);
+                    await verify.react(emojis.thumb);
 
-                    await message.react(emojis.check);
-                    await message.react(emojis.cross);
+                    const reactionResult = await verify.awaitReactions(
+                        (reaction: MessageReaction, user: User): boolean =>
+                            msg.author.id === user.id && reaction.emoji.name === emojis.thumb
+                        , {
+                            max: 1,
+                            time: 1000 * config.confess.messageVerifyTimeout
+                        });
+                    
+                    if (reactionResult.size === 0) {
+                        await msg.channel.send(config.confess.messageCancel)
+                        return;
+                    }
+
+                    let submission = await modChannel.send(msg.content);
+
+                    await submission.react(emojis.check);
+                    await submission.react(emojis.cross);
+
+                    await msg.channel.send(config.confess.messageSent);
                 })
                 .on('messageReactionAdd', async (reaction, user) => {
                     if (
                         reaction.message.channel.id !== config.confess.moderation ||
                         user.bot ||
-                        !Object.values(emojis).includes(reaction.emoji.name)
+                        ![emojis.check, emojis.cross].includes(reaction.emoji.name)
                     )
                         return;
 
