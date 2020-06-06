@@ -3,7 +3,8 @@ import {
     MessageOptions,
     Message,
     PartialMessage,
-    TextChannel
+    TextChannel,
+    DMChannel
 } from 'discord.js';
 
 import { LatexEngine } from '../latex';
@@ -14,15 +15,21 @@ export interface DiscordConfig {
     token: string;
     targets: DiscordTargets;
     pruneInterval: number;
+    confess: Confess;
 }
 
 export interface DiscordTargets {
     [key: string]: string[];
 }
 
+export interface Confess {
+    moderation: string;
+    output: string;
+}
+
 export const DiscordAgent = async (config: DiscordConfig, debug?: boolean) => {
     const engine = await LatexEngine(debug);
-    const client = new Client();
+    const client = new Client({ partials: ['MESSAGE', 'REACTION'] });
     const messageMap: Map<string, Message> = new Map();
     let timeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -116,6 +123,14 @@ export const DiscordAgent = async (config: DiscordConfig, debug?: boolean) => {
         trackMessage(msg.id, reply);
     }
 
+    let modChannel: TextChannel;
+    let outChannel: TextChannel;
+    const emojis = {
+        'check': '✅',
+        'cross': '🚫',
+        'send': '📨'
+    }
+
     return {
         start() {
             client
@@ -145,7 +160,49 @@ export const DiscordAgent = async (config: DiscordConfig, debug?: boolean) => {
                 .on('disconnect', async () => {
                     await engine.destroy();
                     client.destroy();
+                });
+            
+            client
+                .on('ready', () => {
+                    modChannel = client.channels.resolve(config.confess.moderation) as TextChannel;
+                    outChannel = client.channels.resolve(config.confess.output) as TextChannel;
+
+                    if (modChannel === null || outChannel === null)
+                        throw Error('Couldn\'t resolve confession channels.');
                 })
+                .on('message', async (msg) => {
+                    if (!(msg.channel instanceof DMChannel))
+                        return;
+
+                    let message = await modChannel.send(msg.content);
+
+                    await message.react(emojis.check);
+                    await message.react(emojis.cross);
+                })
+                .on('messageReactionAdd', async (reaction, user) => {
+                    if (
+                        reaction.message.channel.id !== config.confess.moderation ||
+                        user.bot ||
+                        !Object.values(emojis).includes(reaction.emoji.name)
+                    )
+                        return;
+
+                    if (reaction.partial) {
+                        try {
+                            await reaction.fetch();
+                        } catch (e) {
+                            console.dir(e);
+                            return;
+                        }
+                    }
+
+                    if (reaction.emoji.name === emojis.cross) {
+                        await reaction.message.delete();
+                    } else if (reaction.emoji.name === emojis.check) {
+                        await outChannel.send(reaction.message.content);
+                        await reaction.message.react(emojis.send);
+                    }
+                });
 
             client.login(config.token);
         }

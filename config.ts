@@ -13,5 +13,12 @@ export const config: DiscordConfig = {
         ]
     },
     // How often edit history should be pruned in minutes
-    pruneInterval: 10
+    pruneInterval: 10,
+    // Confession settings
+    confess: {
+        // Where should confession moderation happen?
+        moderation: 'insert channel id',
+        // Where should accepted confessions be posted?
+        output: 'insert channel id'
+    }
 }
