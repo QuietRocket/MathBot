@@ -6,7 +6,8 @@ import {
     TextChannel,
     DMChannel,
     MessageReaction,
-    User
+    User,
+    MessageEmbed
 } from 'discord.js';
 
 import { LatexEngine } from '../latex';
@@ -197,7 +198,9 @@ export const DiscordAgent = async (config: DiscordConfig, debug?: boolean) => {
                         return;
                     }
 
-                    let submission = await modChannel.send(msg.content);
+                    const embed = new MessageEmbed().setDescription(msg.content);
+
+                    const submission = await modChannel.send(embed);
 
                     await submission.react(emojis.check);
                     await submission.react(emojis.cross);
@@ -224,7 +227,15 @@ export const DiscordAgent = async (config: DiscordConfig, debug?: boolean) => {
                     if (reaction.emoji.name === emojis.cross) {
                         await reaction.message.delete();
                     } else if (reaction.emoji.name === emojis.check) {
-                        await outChannel.send(reaction.message.content);
+                        const msg = reaction.message;
+                        if (msg.embeds.length >= 1) {
+                            const receivedEmbed = msg.embeds[0];
+                            const newEmbed = new MessageEmbed(receivedEmbed);
+                            await outChannel.send(newEmbed)
+                        } else {
+                            const embed = new MessageEmbed().setDescription(msg.content);
+                            await outChannel.send(embed);
+                        }
                         await reaction.message.react(emojis.send);
                     }
                 });
