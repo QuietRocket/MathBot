@@ -130,6 +130,8 @@ export const DiscordAgent = async (config: DiscordConfig, debug?: boolean) => {
         trackMessage(msg.id, reply);
     }
 
+    // Confession stuff
+
     let modChannel: TextChannel;
     let outChannel: TextChannel;
     const emojis = {
@@ -137,6 +139,23 @@ export const DiscordAgent = async (config: DiscordConfig, debug?: boolean) => {
         'cross': '🚫',
         'send': '📨',
         'thumb': '👍',
+    };
+
+    const dayMap = [
+        "Sun",
+        "Mon",
+        "Tues",
+        "Wednes",
+        "Thurs",
+        "Fri",
+        "Satur"
+    ];
+
+    let confessionCounter = 1;
+    let lastDay = (new Date()).getDay();
+
+    const resetCounter = () => {
+        confessionCounter = 1;
     }
 
     return {
@@ -228,12 +247,20 @@ export const DiscordAgent = async (config: DiscordConfig, debug?: boolean) => {
                         await reaction.message.delete();
                     } else if (reaction.emoji.name === emojis.check) {
                         const msg = reaction.message;
+                        const day = new Date().getDay();
+                        const prefix = dayMap[day];
+                        if (day !== lastDay) {
+                            resetCounter();
+                        }
+                        lastDay = day;
+                        const title = `${prefix} #${confessionCounter}`;
+                        confessionCounter++;
                         if (msg.embeds.length >= 1) {
                             const receivedEmbed = msg.embeds[0];
-                            const newEmbed = new MessageEmbed(receivedEmbed);
+                            const newEmbed = new MessageEmbed(receivedEmbed).setTitle(title);
                             await outChannel.send(newEmbed)
                         } else {
-                            const embed = new MessageEmbed().setDescription(msg.content);
+                            const embed = new MessageEmbed().setDescription(msg.content).setTitle(title);
                             await outChannel.send(embed);
                         }
                         await reaction.message.react(emojis.send);
