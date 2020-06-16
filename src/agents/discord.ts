@@ -141,22 +141,17 @@ export const DiscordAgent = async (config: DiscordConfig, debug?: boolean) => {
         'thumb': '👍',
     };
 
-    const dayMap = [
-        "Sun",
-        "Mon",
-        "Tues",
-        "Wednes",
-        "Thurs",
-        "Fri",
-        "Satur"
-    ];
+    const formatter = new Intl.DateTimeFormat('en-US', {
+        weekday: 'short',
+        timeZone: 'America/Los_Angeles'
+    });
 
     let confessionCounter = 1;
-    let lastDay = (new Date()).getDay();
+    let lastDay = formatter.format(new Date());
 
     const resetCounter = () => {
         confessionCounter = 1;
-    }
+    };
 
     return {
         start() {
@@ -247,13 +242,12 @@ export const DiscordAgent = async (config: DiscordConfig, debug?: boolean) => {
                         await reaction.message.delete();
                     } else if (reaction.emoji.name === emojis.check) {
                         const msg = reaction.message;
-                        const day = new Date().getDay();
-                        const prefix = dayMap[day];
+                        const day = formatter.format(new Date());
                         if (day !== lastDay) {
                             resetCounter();
                         }
+                        const title = `${day} #${confessionCounter}`;
                         lastDay = day;
-                        const title = `${prefix} #${confessionCounter}`;
                         confessionCounter++;
                         if (msg.embeds.length >= 1) {
                             const receivedEmbed = msg.embeds[0];
