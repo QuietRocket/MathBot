@@ -139,6 +139,7 @@ export const DiscordAgent = async (config: DiscordConfig, debug?: boolean) => {
         'cross': '🚫',
         'send': '📨',
         'thumb': '👍',
+        'undo': '↩️'
     };
 
     const formatter = new Intl.DateTimeFormat('en-US', {
@@ -152,6 +153,16 @@ export const DiscordAgent = async (config: DiscordConfig, debug?: boolean) => {
     const resetCounter = () => {
         confessionCounter = 1;
     };
+
+    const modifyHistory = async (msg: Message, action: ACTION, author?: string) => {
+        await msg.edit(`${action} by ${author || 'Unknown'}\n${msg.content}`);
+    };
+
+    enum ACTION {
+        REJECTED = 'Rejected',
+        ACCEPTED = 'Accepted',
+        RESET = 'Reset'
+    }
 
     return {
         start() {
@@ -225,7 +236,7 @@ export const DiscordAgent = async (config: DiscordConfig, debug?: boolean) => {
                     if (
                         reaction.message.channel.id !== config.confess.moderation ||
                         user.bot ||
-                        ![emojis.check, emojis.cross].includes(reaction.emoji.name)
+                        ![emojis.check, emojis.cross, emojis.undo].includes(reaction.emoji.name)
                     )
                         return;
 
@@ -233,15 +244,31 @@ export const DiscordAgent = async (config: DiscordConfig, debug?: boolean) => {
                         try {
                             await reaction.fetch();
                         } catch (e) {
-                            console.dir(e);
+                            console.error(e);
                             return;
                         }
                     }
 
-                    if (reaction.emoji.name === emojis.cross) {
-                        await reaction.message.delete();
-                    } else if (reaction.emoji.name === emojis.check) {
-                        const msg = reaction.message;
+                    if (reaction.message.partial) {
+                        try {
+                            await reaction.fetch();
+                        } catch (e) {
+                            console.error(e);
+                            return;
+                        }
+                    }
+                    
+                    const msg = reaction.message;
+                    const emoji = reaction.emoji.name;
+
+                    if (emoji === emojis.cross) {
+                        await modifyHistory(msg, ACTION.REJECTED, user.username);
+                        await msg.react(emojis.undo);
+                    } else if (emoji === emojis.check) {
+                        if (msg.content.length && msg.content.split('\n')[0].split(' ')[0] === ACTION.REJECTED)
+                            return;
+
+                        await modifyHistory(msg, ACTION.ACCEPTED, user.username);
                         const day = formatter.format(new Date());
                         if (day !== lastDay) {
                             resetCounter();
@@ -257,7 +284,12 @@ export const DiscordAgent = async (config: DiscordConfig, debug?: boolean) => {
                             const embed = new MessageEmbed().setDescription(msg.content).setTitle(title);
                             await outChannel.send(embed);
                         }
-                        await reaction.message.react(emojis.send);
+                        await msg.react(emojis.send);
+                    } else if (emoji === emojis.undo) {
+                        await modifyHistory(msg, ACTION.RESET, user.username);
+                        await msg.reactions.removeAll();
+                        await msg.react(emojis.check);
+                        await msg.react(emojis.cross);
                     }
                 });
 
