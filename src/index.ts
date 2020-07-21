@@ -1,4 +1,4 @@
-import { DiscordAgent } from './agents/discord';
+import { DiscordAgent } from './discord';
 import { config } from '../config';
 
 (async () => {
