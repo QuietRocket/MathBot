@@ -17,5 +17,10 @@ export const config: DiscordConfig = {
         messageCancel: 'No reactions detected. Canceling confession.',
         // Successful submission of confession.
         messageSent: 'Thank you for your anonymous submission. Moderators will review your submission at their leisure.'
+    },
+    // Infinity settings
+    infinity: {
+        channel: 'channel id',
+        manager: 'manager id'
     }
 }

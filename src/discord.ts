@@ -11,7 +11,8 @@ import {
 export interface DiscordConfig {
     token: string;
     confess: Confess;
-}
+    infinity: Infinity;
+};
 
 export interface Confess {
     moderation: string;
@@ -20,7 +21,12 @@ export interface Confess {
     messageVerifyTimeout: number;
     messageCancel: string;
     messageSent: string;
-}
+};
+
+export interface Infinity {
+    channel: string;
+    manager: string;
+};
 
 export const DiscordAgent = async (config: DiscordConfig) => {
     const client = new Client({ partials: ['MESSAGE', 'REACTION'] });
@@ -34,7 +40,8 @@ export const DiscordAgent = async (config: DiscordConfig) => {
         'cross': '🚫',
         'send': '📨',
         'thumb': '👍',
-        'undo': '↩️'
+        'undo': '↩️',
+        'x': '❌'
     };
 
     const formatter = new Intl.DateTimeFormat('en-US', {
@@ -57,18 +64,38 @@ export const DiscordAgent = async (config: DiscordConfig) => {
         REJECTED = 'Rejected',
         ACCEPTED = 'Accepted',
         RESET = 'Reset'
-    }
+    };
+
+    // Infinity stuff
+
+    const matchInteger = (str: string): number | null => {
+        const match = str.match(/((?:\d|,)+)/);
+        if (match === null)
+            return null;
+
+        const processed = match[1].replace(/,/g, '');
+        const parsed = parseInt(processed);
+
+        if (isNaN(parsed))
+            return null;
+        
+        return parsed;
+    };
+
+    let current = 0;
+    let goal = 1;
+    let factor = 5;
 
     return {
         start() {
+
+            // General events
             client
-                .on('message', async (msg) => {
-                    
-                })
                 .on('disconnect', async () => {
                     client.destroy();
                 });
-            
+
+            // Confession events
             client
                 .on('ready', () => {
                     modChannel = client.channels.resolve(config.confess.moderation) as TextChannel;
@@ -165,6 +192,63 @@ export const DiscordAgent = async (config: DiscordConfig) => {
                         await msg.reactions.removeAll();
                         await msg.react(emojis.check);
                         await msg.react(emojis.cross);
+                    }
+                });
+            
+            client
+                .on('message', async (msg) => {
+                    if (
+                        msg.channel.id !== config.infinity.channel ||
+                        msg.author.bot
+                    )
+                        return;
+                    
+                    if (msg.content.startsWith('/stats')) {
+                        msg.reply(`The current number is ${current}. The goal is ${goal}. The next goal is ${goal * factor} (factor: x${factor}).`)
+                        return;
+                    }
+                    
+                    const match = msg.content.match(/\/set(current|goal|factor)\s(.*)/);
+                    if (match === null) {
+                        const num = matchInteger(msg.content);
+                        if (num === null)
+                            return;
+
+                        const correct = current + 1
+                        if (correct === num) {
+                            current += 1
+                        } else {
+                            await msg.react(emojis.x);
+                        }
+
+                        if (current === goal) {
+                            const nextGoal = goal * factor;
+                            await msg.channel.send(`Woohoo! The goal of ${goal} was met! The next goal is ${nextGoal} (factor: x${factor}).`);
+                            goal = nextGoal;
+                        }
+                    } else {
+                        if (msg.author.id !== config.infinity.manager)
+                            return;
+
+                        const num = matchInteger(match[2]);
+                        if (num === null)
+                            return;
+
+                        const type = match[1];
+
+                        switch (type) {
+                            case "current":
+                                current = num;
+                                await msg.reply(`The current number is ${num}.`);
+                                break;
+                            case "goal":
+                                goal = num;
+                                await msg.reply(`The goal is now ${num}.`);
+                                break;
+                            case "factor":
+                                factor = num;
+                                await msg.reply(`The factor is now ${num}. That means after this goal (${goal}), the next goal is ${goal * factor}.`);
+                        }
                     }
                 });
 
