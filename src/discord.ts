@@ -84,7 +84,9 @@ export const DiscordAgent = async (config: DiscordConfig) => {
 
     let current = 0;
     let goal = 1;
-    let factor = 5;
+    let factor = 2;
+
+    let lastId = ""
 
     return {
         start() {
@@ -213,6 +215,12 @@ export const DiscordAgent = async (config: DiscordConfig) => {
                         const num = matchInteger(msg.content);
                         if (num === null)
                             return;
+                            
+                        const authorId = msg.author.id;
+                        if (authorId === lastId) {
+                            msg.reply('You already went your turn!');
+                            return;
+                        }
 
                         const correct = current + 1
                         if (correct === num) {
@@ -226,6 +234,8 @@ export const DiscordAgent = async (config: DiscordConfig) => {
                             await msg.channel.send(`Woohoo! The goal of ${goal} was met! The next goal is ${nextGoal} (factor: x${factor}).`);
                             goal = nextGoal;
                         }
+
+                        lastId = authorId;
                     } else {
                         if (msg.author.id !== config.infinity.manager)
                             return;
