@@ -158,6 +158,7 @@ export const DiscordAgent = async (config: DiscordConfig) => {
                             const embed = new MessageEmbed().setDescription(msg.content).setTitle(title);
                             await outChannel.send(embed);
                         }
+                        await msg.reactions.removeAll();
                         await msg.react(emojis.send);
                     } else if (emoji === emojis.undo) {
                         await modifyHistory(msg, ACTION.RESET, user.username);
