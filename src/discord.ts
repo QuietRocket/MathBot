@@ -31,6 +31,10 @@ export interface Infinity {
 };
 
 const rKeys = {
+    confession: {
+        counter: 'confession:counter',
+        lastDay: 'confession:lastDay'
+    },
     infinity: {
         current: 'infinity:current',
         goal: 'infinity:goal',
@@ -43,10 +47,18 @@ export const DiscordAgent = async (config: DiscordConfig) => {
     const client = new Client({ partials: ['MESSAGE', 'REACTION'] });
     const redis = new Redis(process.env.REDIS_URL);
 
+    const formatter = new Intl.DateTimeFormat('en-US', {
+        weekday: 'short',
+        timeZone: 'America/Los_Angeles'
+    });
+
     await redis.pipeline()
         .setnx(rKeys.infinity.current, 0)
         .setnx(rKeys.infinity.goal, 1)
         .setnx(rKeys.infinity.factor, 2)
+
+        .setnx(rKeys.confession.counter, 1)
+        .setnx(rKeys.confession.lastDay, formatter.format(new Date()))
     .exec();
 
     // Confession stuff
@@ -60,18 +72,6 @@ export const DiscordAgent = async (config: DiscordConfig) => {
         'thumb': '👍',
         'undo': '↩️',
         'x': '❌'
-    };
-
-    const formatter = new Intl.DateTimeFormat('en-US', {
-        weekday: 'short',
-        timeZone: 'America/Los_Angeles'
-    });
-
-    let confessionCounter = 1;
-    let lastDay = formatter.format(new Date());
-
-    const resetCounter = () => {
-        confessionCounter = 1;
     };
 
     const modifyHistory = async (msg: Message, action: ACTION, author?: string) => {
@@ -185,12 +185,14 @@ export const DiscordAgent = async (config: DiscordConfig) => {
 
                         await modifyHistory(msg, ACTION.ACCEPTED, user.username);
                         const day = formatter.format(new Date());
+                        const lastDay = await redis.get(rKeys.confession.lastDay);
                         if (day !== lastDay) {
-                            resetCounter();
+                            await redis.incr(rKeys.confession.counter);
                         }
-                        const title = `${day} #${confessionCounter}`;
-                        lastDay = day;
-                        confessionCounter++;
+                        const counter = await redis.get(rKeys.confession.counter);
+                        const title = `${day} #${counter}`;
+                        await redis.set(rKeys.confession.lastDay, day);
+                        await redis.incr(rKeys.confession.counter);
                         if (msg.embeds.length >= 1) {
                             const receivedEmbed = msg.embeds[0];
                             const newEmbed = new MessageEmbed(receivedEmbed).setTitle(title);
