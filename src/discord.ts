@@ -8,6 +8,8 @@ import {
     MessageEmbed
 } from 'discord.js';
 
+import Redis from 'ioredis';
+
 export interface DiscordConfig {
     token: string;
     confess: Confess;
@@ -28,8 +30,24 @@ export interface Infinity {
     manager: string;
 };
 
+const rKeys = {
+    infinity: {
+        current: 'infinity:current',
+        goal: 'infinity:goal',
+        factor: 'infinity:factor',
+        lastId: 'infinity:lastId'
+    }
+};
+
 export const DiscordAgent = async (config: DiscordConfig) => {
     const client = new Client({ partials: ['MESSAGE', 'REACTION'] });
+    const redis = new Redis(process.env.REDIS_URL);
+
+    await redis.pipeline()
+        .setnx(rKeys.infinity.current, 0)
+        .setnx(rKeys.infinity.goal, 1)
+        .setnx(rKeys.infinity.factor, 2)
+    .exec();
 
     // Confession stuff
 
@@ -81,12 +99,6 @@ export const DiscordAgent = async (config: DiscordConfig) => {
         
         return parsed;
     };
-
-    let current = 0;
-    let goal = 1;
-    let factor = 2;
-
-    let lastId = ""
 
     return {
         start() {
@@ -205,8 +217,24 @@ export const DiscordAgent = async (config: DiscordConfig) => {
                     )
                         return;
                     
+                    const [
+                        [_currentError, currentRaw],
+                        [_goalError, goalRaw],
+                        [_factorError, factorRaw]
+                    ] = await redis.pipeline()
+                        .get(rKeys.infinity.current)
+                        .get(rKeys.infinity.goal)
+                        .get(rKeys.infinity.factor)
+                    .exec();
+                    
+                    const current = parseInt(currentRaw);
+                    const goal = parseInt(goalRaw);
+                    const factor = parseInt(factorRaw);
+                    const nextGoal = goal * factor;
+                    const correct = current + 1;
+                    
                     if (msg.content.startsWith('/stats')) {
-                        msg.reply(`The current number is ${current}. The goal is ${goal}. The next goal is ${goal * factor} (factor: x${factor}).`)
+                        msg.reply(`The next number is ${correct}. The goal is ${goal}. The next goal is ${nextGoal} (factor: x${factor}).`)
                         return;
                     }
                     
@@ -217,25 +245,24 @@ export const DiscordAgent = async (config: DiscordConfig) => {
                             return;
                             
                         const authorId = msg.author.id;
+                        const lastId = await redis.get(rKeys.infinity.lastId);
                         if (authorId === lastId) {
                             await msg.reply('You already went your turn!');
                             return;
                         }
 
-                        const correct = current + 1
-                        if (correct === num) {
-                            current += 1
+                        if (num === correct) {
+                            await redis.incr(rKeys.infinity.current);
                         } else {
                             await msg.react(emojis.x);
                         }
 
                         if (current === goal) {
-                            const nextGoal = goal * factor;
                             await msg.channel.send(`Woohoo! The goal of ${goal} was met! The next goal is ${nextGoal} (factor: x${factor}).`);
-                            goal = nextGoal;
+                            await redis.set(rKeys.infinity.goal, nextGoal);
                         }
 
-                        lastId = authorId;
+                        await redis.set(rKeys.infinity.lastId, authorId);
                     } else {
                         if (msg.author.id !== config.infinity.manager)
                             return;
@@ -248,16 +275,17 @@ export const DiscordAgent = async (config: DiscordConfig) => {
 
                         switch (type) {
                             case "current":
-                                current = num;
+                                await redis.set(rKeys.infinity.current, num);
                                 await msg.reply(`The current number is ${num}.`);
                                 break;
                             case "goal":
-                                goal = num;
+                                await redis.set(rKeys.infinity.goal, num);
                                 await msg.reply(`The goal is now ${num}.`);
                                 break;
                             case "factor":
-                                factor = num;
+                                await redis.set(rKeys.infinity.factor, num);
                                 await msg.reply(`The factor is now ${num}. That means after this goal (${goal}), the next goal is ${goal * factor}.`);
+                                break;
                         }
                     }
                 });

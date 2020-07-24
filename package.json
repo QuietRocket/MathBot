@@ -11,9 +11,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "discord.js": "^12.2.0"
+    "discord.js": "^12.2.0",
+    "ioredis": "^4.17.3"
   },
   "devDependencies": {
+    "@types/ioredis": "^4.17.2",
     "@types/node": "12.12.2",
     "ts-node": "^8.10.1",
     "typescript": "^3.9.3"
