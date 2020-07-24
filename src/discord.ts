@@ -218,7 +218,7 @@ export const DiscordAgent = async (config: DiscordConfig) => {
                             
                         const authorId = msg.author.id;
                         if (authorId === lastId) {
-                            msg.reply('You already went your turn!');
+                            await msg.reply('You already went your turn!');
                             return;
                         }
 
