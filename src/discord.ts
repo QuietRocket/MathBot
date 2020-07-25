@@ -4,11 +4,13 @@ import Redis from 'ioredis';
 
 import { Confession, apply as confession } from './handlers/confession';
 import { Infinity, apply as infinity } from './handlers/infinity';
+import { Roles, apply as roles } from './handlers/role';
 
 export interface DiscordConfig {
     token: string;
     confess: Confession;
     infinity: Infinity;
+    roles: Roles;
 };
 
 export interface Environment {
@@ -31,9 +33,9 @@ export const DiscordAgent = async (config: DiscordConfig) => {
         async start() {
             await confession(env);
             await infinity(env);
+            await roles(env);
 
             await client.login(config.token);
         }
-
     };
 }

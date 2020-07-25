@@ -22,5 +22,9 @@ export const config: DiscordConfig = {
     infinity: {
         channel: 'channel id',
         manager: 'manager id'
+    },
+    // Roles settings
+    roles: {
+        channel: 'channel id'
     }
 }
