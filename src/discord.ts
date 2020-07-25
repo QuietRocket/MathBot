@@ -8,6 +8,7 @@ import { Roles, apply as roles } from './handlers/role';
 
 export interface DiscordConfig {
     token: string;
+    guild: string;
     confess: Confession;
     infinity: Infinity;
     roles: Roles;

@@ -1,4 +1,5 @@
 import { Environment } from '../discord';
+import { Guild } from 'discord.js';
 
 export interface Roles {
     channel: string;
@@ -7,7 +8,15 @@ export interface Roles {
 export async function apply(env: Environment) {
     const [config, client, redis] = [env.config, env.client, env.redis];
 
+    let guild: Guild
+
     client
+        .on('ready', () => {
+            guild = client.guilds.resolve(env.config.guild) as Guild;
+
+            if (guild === null)
+                throw Error('Couldn\'t resolve guild.');
+        })
         .on('message', async (msg) => {
             if (
                 msg.channel.id !== config.roles.channel ||
@@ -26,8 +35,12 @@ export async function apply(env: Environment) {
                 return;
             }
             
-            const [r, g, b] = colorMatch;
-
-            msg.reply(`name: "${name}" r: ${r}, g: ${g}, b: ${b}`);
+            const colors = colorMatch.map(a => parseInt(a)).filter(a => !isNaN(a));
+            if (colors.length !== 3) {
+                msg.reply('Invalid color.');
+                return;
+            }
+            
+            const [r, g, b] = colors;
         });
 };

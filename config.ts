@@ -3,6 +3,8 @@ import { DiscordConfig } from './src/discord';
 export const config: DiscordConfig = {
     // Discord bot token
     token: 'insert token here',
+    // Guild id
+    guild: 'insert guild id here',
     // Confession settings
     confess: {
         // Where should confession moderation happen?
