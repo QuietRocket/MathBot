@@ -32,12 +32,7 @@ export const DiscordAgent = async (config: DiscordConfig) => {
             await confession(env);
             await infinity(env);
 
-            client
-                .on('disconnect', async () => {
-                    client.destroy();
-                });
-
-            client.login(config.token);
+            await client.login(config.token);
         }
 
     };
