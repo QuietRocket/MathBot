@@ -134,7 +134,7 @@ export async function apply(env: Environment) {
                 const day = formatter.format(new Date());
                 const lastDay = await redis.get(rKeys.lastDay);
                 if (day !== lastDay) {
-                    await redis.incr(rKeys.counter);
+                    await redis.set(rKeys.counter, 1);
                 }
                 const counter = await redis.get(rKeys.counter);
                 const title = `${day} #${counter}`;
