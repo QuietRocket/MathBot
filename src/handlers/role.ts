@@ -3,6 +3,7 @@ import { Guild, Role } from 'discord.js';
 
 export interface Roles {
     channel: string;
+    member: string;
 };
 
 export async function apply(env: Environment) {
@@ -29,13 +30,17 @@ export async function apply(env: Environment) {
     };
 
     let guild: Guild
+    let memberRole: Role
 
     client
         .on('ready', () => {
-            guild = client.guilds.resolve(env.config.guild) as Guild;
-
+            guild = client.guilds.resolve(config.guild) as Guild;
             if (guild === null)
                 throw Error('Couldn\'t resolve guild.');
+            
+            memberRole = guild.roles.resolve(config.roles.member) as Role;
+            if (memberRole === null)
+                throw Error('Couldn\'t resolve members role.');
         })
         .on('message', async (msg) => {
             if (
@@ -89,27 +94,37 @@ export async function apply(env: Environment) {
                             await msg.reply(messages.roleAlreadyCreate);
                             return;
                         }
-                        const role = await guild.roles.create({
-                            data: {
-                                name: msg.author.username
-                            }
-                        });
+
                         const member = guild.member(msg.author);
                         if (member === null) {
                             await msg.reply(messages.notGuildMemeber);
                             return;
                         }
+
+                        const role = await guild.roles.create({
+                            data: {
+                                name: msg.author.username
+                            }
+                        });
+
                         await member.roles.add(role);
+                        await member.roles.add(memberRole);
+
                         await redis.set(roleKey, role.id);
                         await msg.reply(messages.createdRole);
-                        break;
                     };
+                    break;
                 case 'remove':
                     {
                         const roleId = await redis.get(roleKey);
                         if (roleId === null) {
                             await msg.reply(messages.noRoleToDelete);
                             return;
+                        }
+
+                        const member = guild.member(msg.author);
+                        if (member !== null) {
+                            await member.roles.remove(memberRole);
                         }
 
                         await redis.del(roleKey);

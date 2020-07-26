@@ -27,6 +27,7 @@ export const config: DiscordConfig = {
     },
     // Roles settings
     roles: {
-        channel: 'channel id'
+        channel: 'channel id',
+        member: 'member role id'
     }
 }
