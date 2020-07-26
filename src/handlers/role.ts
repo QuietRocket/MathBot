@@ -10,9 +10,6 @@ export async function apply(env: Environment) {
     const [config, client, redis] = [env.config, env.client, env.redis];
 
     const rKeys = {
-        role(id: string): string {
-            return `role:${id}`;
-        },
         roles: 'roles'
     };
 
@@ -56,10 +53,10 @@ export async function apply(env: Environment) {
             const type = match[1].toLowerCase();
             const rest = match[2];
 
-            const roleKey = rKeys.role(msg.author.id);
+            const authorId = msg.author.id;
 
             const getRole = async (): Promise<Role | null> => {
-                const roleId = await redis.get(roleKey);
+                const roleId = await redis.hget(rKeys.roles, authorId);
                 if (roleId === null) {
                     await msg.reply(messages.createRole);
                     return null;
@@ -90,7 +87,7 @@ export async function apply(env: Environment) {
             switch (type) {
                 case 'create':
                     {
-                        if (await redis.exists(roleKey) === 1) {
+                        if (await redis.hexists(rKeys.roles, authorId) === 1) {
                             await msg.reply(messages.roleAlreadyCreate);
                             return;
                         }
@@ -110,13 +107,13 @@ export async function apply(env: Environment) {
                         await member.roles.add(role);
                         await member.roles.add(memberRole);
 
-                        await redis.set(roleKey, role.id);
+                        await redis.hset(rKeys.roles, authorId, role.id);
                         await msg.reply(messages.createdRole);
                     };
                     break;
                 case 'remove':
                     {
-                        const roleId = await redis.get(roleKey);
+                        const roleId = await redis.hget(rKeys.roles, authorId);
                         if (roleId === null) {
                             await msg.reply(messages.noRoleToDelete);
                             return;
@@ -127,7 +124,7 @@ export async function apply(env: Environment) {
                             await member.roles.remove(memberRole);
                         }
 
-                        await redis.del(roleKey);
+                        await redis.hdel(rKeys.roles, authorId);
 
                         const role = guild.roles.resolve(roleId);
                         if (role === null) {
