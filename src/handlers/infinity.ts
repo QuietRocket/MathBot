@@ -96,13 +96,13 @@ export async function apply(env: Environment) {
                 if (processed.includes(correct)) {
                     await redis.incr(rKeys.current);
                     await msg.react(emojis.correct);
+
+                    if (correct === goal) {
+                        await msg.channel.send(`Woohoo! The goal of ${goal} was met! The next goal is ${nextGoal} (factor: x${factor}).`);
+                        await redis.set(rKeys.goal, nextGoal);
+                    }
                 } else {
                     await msg.react(emojis.incorrect);
-                }
-
-                if (current === goal) {
-                    await msg.channel.send(`Woohoo! The goal of ${goal} was met! The next goal is ${nextGoal} (factor: x${factor}).`);
-                    await redis.set(rKeys.goal, nextGoal);
                 }
 
                 await redis.set(rKeys.lastId, authorId);
