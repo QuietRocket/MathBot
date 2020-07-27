@@ -16,7 +16,8 @@ export async function apply(env: Environment) {
     };
 
     const emojis = {
-        'x': '❌'
+        'correct': '✅',
+        'incorrect': '❌'
     };
 
     await redis
@@ -71,10 +72,20 @@ export async function apply(env: Environment) {
 
             const match = msg.content.match(/\/set(current|goal|factor)\s(.*)/);
             if (match === null) {
-                const num = matchInteger(msg.content);
-                if (num === null)
+                // Find all strings of numbers.
+                const matches = msg.cleanContent.match(/\d+/g);
+                if (matches === null)
                     return;
 
+                // Parse matches.
+                const processed = matches
+                    .map(a => parseInt(a)) // Strings to ints.
+                    .filter(a => !isNaN(a) && Math.abs(correct - a) < 100) // Filter NaN, unreasonably large/small numbers.
+
+                if (processed.length === 0)
+                    return;
+
+                // If execution passed to this point, the matches were a valid attempt.
                 const authorId = msg.author.id;
                 const lastId = await redis.get(rKeys.lastId);
                 if (authorId === lastId) {
@@ -82,10 +93,11 @@ export async function apply(env: Environment) {
                     return;
                 }
 
-                if (num === correct) {
+                if (processed.includes(correct)) {
                     await redis.incr(rKeys.current);
+                    await msg.react(emojis.correct);
                 } else {
-                    await msg.react(emojis.x);
+                    await msg.react(emojis.incorrect);
                 }
 
                 if (current === goal) {
