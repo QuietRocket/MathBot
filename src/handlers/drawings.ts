@@ -46,7 +46,6 @@ export async function apply(env: Environment) {
                     ctx.lineTo(x, y);
                     break;
                 case 2: // up
-                    ctx.lineTo(x, y);
                     ctx.stroke();
                     break;
             };

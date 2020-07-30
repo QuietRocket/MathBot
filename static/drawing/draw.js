@@ -7,7 +7,6 @@
     canvas.width = 500;
     canvas.height = 500;
     const bounds = canvas.getBoundingClientRect();
-    console.log(bounds);
 
     /** @type {HTMLButtonElement} */
     // @ts-ignore
@@ -92,7 +91,7 @@
     /** @type {Point} */
     let prev = [0, 0];
 
-    let penDown = false;
+    let penIsDown = false;
 
     const redraw = () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -109,7 +108,6 @@
                     ctx.lineTo(x, y);
                     break;
                 case 2: // up
-                    ctx.lineTo(x, y);
                     ctx.stroke();
                     break;
             };
@@ -123,32 +121,78 @@
         }
     };
 
-    canvas.addEventListener('mousedown', (ev) => {
-        penDown = true;
+    /** @type {(ev: MouseEvent) => Point} */
+    const pointMouse = (ev) => {
+        return [ev.clientX - bounds.left, ev.clientY - bounds.top];
+    };
 
-        actions.push([[ev.clientX, ev.clientY], 0]);
+    /** @type {(ev: TouchEvent) => Point} */
+    const pointTouch = (ev) => {
+        if (!ev.touches.length)
+            return [0, 0];
+
+        const touch = ev.touches[0];
+
+        return [touch.clientX - bounds.left, touch.clientY - bounds.top];
+    };
+
+    /** @type {(p: Point) => void} */
+    const penDown = (p) => {
+        penIsDown = true;
+
+        actions.push([p, 0]);
         redraw();
-    });
+    };
 
-    canvas.addEventListener('mouseup', (ev) => {
-        penDown = false;
-
-        actions.push([[ev.clientX, ev.clientY], 2]);
-        redraw();
-    });
-
-    canvas.addEventListener('mousemove', (ev) => {
-        const [x1, y1] = [ev.clientX, ev.clientY];
+    /** @type {(p: Point) => void} */
+    const penMove = (p) => {
+        const [x1, y1] = p;
         const [x2, y2] = prev;
         const dist = ((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5;
 
-        if (penDown && dist > 10) {
-            /** @type {Point} */
-            const point = [x1, y1];
-            prev = point;
-            actions.push([point, 1]);
+        if (penIsDown && dist > 10) {
+            prev = p;
+            actions.push([p, 1]);
             redraw();
         }
+    };
+
+    /** @type {() => void} */
+    const penUp = () => {
+        penIsDown = false;
+
+        actions.push([[0, 0], 2]);
+        redraw();
+    };
+
+    canvas.addEventListener('touchstart', (ev) => {
+        penDown(pointTouch(ev));
+
+        ev.preventDefault();
+    });
+
+    canvas.addEventListener('touchmove', (ev) => {
+        penMove(pointTouch(ev));
+
+        ev.preventDefault();
+    });
+
+    canvas.addEventListener('touchend', (ev) => {
+        penUp();
+
+        ev.preventDefault();
+    });
+
+    canvas.addEventListener('mousedown', (ev) => {
+        penDown(pointMouse(ev));
+    });
+
+    canvas.addEventListener('mousemove', (ev) => {
+        penMove(pointMouse(ev));
+    });
+
+    canvas.addEventListener('mouseup', (ev) => {
+        penUp();
     });
 
     document.body.appendChild(canvas);
