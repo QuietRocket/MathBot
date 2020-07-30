@@ -11,10 +11,13 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "canvas": "^2.6.1",
     "discord.js": "^12.2.0",
+    "express": "^4.17.1",
     "ioredis": "^4.17.3"
   },
   "devDependencies": {
+    "@types/express": "^4.17.7",
     "@types/ioredis": "^4.17.2",
     "@types/node": "12.12.2",
     "ts-node": "^8.10.1",

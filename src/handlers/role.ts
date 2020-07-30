@@ -7,7 +7,7 @@ export interface Roles {
 };
 
 export async function apply(env: Environment) {
-    const [config, client, redis] = [env.config, env.client, env.redis];
+    const [config, client, redis, guild] = [env.config, env.client, env.redis, env.guild];
 
     const rKeys = {
         roles: 'roles'
@@ -26,19 +26,11 @@ export async function apply(env: Environment) {
         invalidColor: 'Invalid color'
     };
 
-    let guild: Guild
-    let memberRole: Role
+    let memberRole = guild.roles.resolve(config.roles.member) as Role;
+    if (memberRole === null)
+        throw Error('Couldn\'t resolve members role.');
 
     client
-        .on('ready', () => {
-            guild = client.guilds.resolve(config.guild) as Guild;
-            if (guild === null)
-                throw Error('Couldn\'t resolve guild.');
-            
-            memberRole = guild.roles.resolve(config.roles.member) as Role;
-            if (memberRole === null)
-                throw Error('Couldn\'t resolve members role.');
-        })
         .on('message', async (msg) => {
             if (
                 msg.channel.id !== config.roles.channel ||

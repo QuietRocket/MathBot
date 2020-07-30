@@ -18,7 +18,7 @@ export interface Confession {
 };
 
 export async function apply(env: Environment) {
-    const [config, client, redis] = [env.config, env.client, env.redis];
+    const [config, client, redis, guild] = [env.config, env.client, env.redis, env.guild];
 
     const rKeys = {
         counter: 'confession:counter',
@@ -44,9 +44,6 @@ export async function apply(env: Environment) {
         .setnx(rKeys.lastDay, formatter.format(new Date()))
         .exec();
 
-    let modChannel: TextChannel;
-    let outChannel: TextChannel;
-
     const modifyHistory = async (msg: Message, action: ACTION, author?: string) => {
         await msg.edit(`${action} by ${author || 'Unknown'}\n${msg.content}`);
     };
@@ -57,14 +54,12 @@ export async function apply(env: Environment) {
         RESET = 'Reset'
     };
 
-    client
-        .on('ready', () => {
-            modChannel = client.channels.resolve(config.confess.moderation) as TextChannel;
-            outChannel = client.channels.resolve(config.confess.output) as TextChannel;
+    let modChannel = guild.channels.resolve(config.confess.moderation) as TextChannel;
+    let outChannel = guild.channels.resolve(config.confess.output) as TextChannel;
+    if (modChannel === null || outChannel === null)
+        throw Error('Couldn\'t resolve confession channels.');
 
-            if (modChannel === null || outChannel === null)
-                throw Error('Couldn\'t resolve confession channels.');
-        })
+    client
         .on('message', async (msg) => {
             if (!(msg.channel instanceof DMChannel) || msg.author.bot)
                 return;

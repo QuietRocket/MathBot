@@ -1,4 +1,4 @@
-FROM node:14.3.0-buster-slim AS build
+FROM node:14.6.0-buster-slim AS build
 USER node
 WORKDIR /home/node
 COPY package.json package-lock.json ./
