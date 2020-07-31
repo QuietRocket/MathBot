@@ -6,7 +6,11 @@
     const canvas = document.getElementById('draw');
     canvas.width = 500;
     canvas.height = 500;
-    const bounds = canvas.getBoundingClientRect();
+    let bounds = canvas.getBoundingClientRect();
+
+    window.addEventListener('resize', (ev) => {
+        bounds = canvas.getBoundingClientRect();
+    });
 
     /** @type {HTMLButtonElement} */
     // @ts-ignore

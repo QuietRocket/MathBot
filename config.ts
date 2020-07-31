@@ -29,5 +29,8 @@ export const config: DiscordConfig = {
     roles: {
         channel: 'channel id',
         member: 'member role id'
+    },
+    drawing: {
+        channel: 'channel id'
     }
 }
