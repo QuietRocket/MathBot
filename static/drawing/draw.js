@@ -57,9 +57,12 @@
 
     // Session definitions
 
-    size = Math.min(window.innerHeight, window.innerWidth) - 10;
+    const updateSize = () => {
+        size = Math.min(window.innerHeight, window.innerWidth) - 10;
+        canvas.width = canvas.height = size;
+    };
 
-    canvas.width = canvas.height = size;
+    updateSize();
 
     const updateBounds = () => {
         const rect = canvas.getBoundingClientRect();
@@ -75,8 +78,18 @@
 
     updateLineWidth();
 
+    /** @type {(i: number) => number} */
+    const normalize = (i) => i / size;
+
+    /** @type {(i: number) => number} */
+    const specialize = (i) => i * size;
+
     // Events
-    window.addEventListener('resize', updateBounds);
+    window.addEventListener('resize', (ev) => {
+        updateBounds();
+        updateSize();
+        redraw();
+    });
 
     window.addEventListener('scroll', updateBounds);
 
@@ -141,7 +154,7 @@
             i++;
 
             if (type <= -1 && type >= -3) {
-                const [x, y] = [actionBuffer[i], actionBuffer[i + 1]];
+                const [x, y] = [actionBuffer[i], actionBuffer[i + 1]].map(specialize);
                 i += 2;
 
                 switch (type) {
@@ -211,7 +224,7 @@
     const penDown = (p) => {
         penIsDown = true;
 
-        actionBuffer.push(-1, ...p);
+        actionBuffer.push(-1, ...p.map(normalize));
         actionBuffer.push(-4, lineWidth);
         
         redraw();
@@ -225,7 +238,7 @@
 
         if (penIsDown && dist > 5) {
             prev = p;
-            actionBuffer.push(-2, ...p);
+            actionBuffer.push(-2, ...p.map(normalize));
             redraw();
         }
     };
@@ -234,7 +247,7 @@
     const penUp = (p) => {
         penIsDown = false;
 
-        actionBuffer.push(-3, ...p);
+        actionBuffer.push(-3, ...p.map(normalize));
 
         redraw();
     };
