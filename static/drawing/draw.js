@@ -18,6 +18,9 @@
     /** @type {number[]} */
     let actionBuffer = [];
 
+    /** @type {Point} */
+    let lastTouch;
+
     // Element declarations
 
     /** @type {HTMLCanvasElement} */
@@ -259,7 +262,9 @@
 
         const touch = ev.touches[0];
 
-        return [touch.clientX - left, touch.clientY - top];
+        lastTouch = [touch.clientX - left, touch.clientY - top]
+
+        return lastTouch;
     };
 
     /** @type {(p: Point) => void} */
@@ -310,7 +315,7 @@
         });
 
         canvas.addEventListener('touchend', (ev) => {
-            penUp(pointTouch(ev));
+            penUp(lastTouch);
 
             ev.preventDefault();
         });
