@@ -1,28 +1,70 @@
 //@ts-check
 
 (() => {
+    // Session variables
+
+    /** @type {number} */
+    let size;
+
+    /** @type {Point} */
+    let bounds;
+
+    /** @type {number} */
+    let lineWidth;
+
+    // Element declarations
+
     /** @type {HTMLCanvasElement} */
-    // @ts-ignore
-    const canvas = document.getElementById('draw');
-    canvas.width = 500;
-    canvas.height = 500;
-    let bounds = canvas.getBoundingClientRect();
-
-    window.addEventListener('resize', (ev) => {
-        bounds = canvas.getBoundingClientRect();
-    });
+    let canvas;
 
     /** @type {HTMLButtonElement} */
-    // @ts-ignore
-    const undoButton = document.getElementById('undo');
+    let undoButton;
 
     /** @type {HTMLButtonElement} */
-    // @ts-ignore
-    const clearButton = document.getElementById('clear');
+    let clearButton;
 
     /** @type {HTMLButtonElement} */
+    let sendButton;
+
+    /** @type {HTMLInputElement} */
+    let slider;
+
+    // Element queries
+
     // @ts-ignore
-    const sendButton = document.getElementById('send');
+    canvas = document.getElementById('draw');
+
+    // @ts-ignore
+    undoButton = document.getElementById('undo');
+
+    // @ts-ignore
+    clearButton = document.getElementById('clear');
+
+    // @ts-ignore
+    sendButton = document.getElementById('send');
+
+    // @ts-ignore
+    slider = document.getElementById('slider');
+
+    // Session definitions
+
+    size = Math.min(window.innerHeight, window.innerWidth) - 10;
+
+    canvas.width = canvas.height = size;
+
+
+    const updateBounds = () => {
+        const rect = canvas.getBoundingClientRect();
+
+        bounds = [rect.left, rect.top];
+    };
+
+    updateBounds();
+
+    // Events
+    window.addEventListener('resize', updateBounds);
+
+    window.addEventListener('scroll', updateBounds);
 
     undoButton.addEventListener('click', (ev) => {
         for (let i = actions.length - 1; i >= 0; i--) {
@@ -44,9 +86,6 @@
         const out = [];
 
         actions.forEach(([[x, y], t]) => out.push(x, y, t));
-
-        // @ts-ignore
-        window.lawl = out;
 
         const body = JSON.stringify(out);
 
@@ -74,10 +113,23 @@
         }
     });
 
+    slider.addEventListener('change', (ev) => {
+        lineWidth = computeLineWidth();
+        redraw();
+    });
+
+    /** @type {() => number} */
+    const computeLineWidth = () => {
+        const num = slider.valueAsNumber;
+        return size / 2 * num / 100;
+    };
+
     if (!canvas.getContext) {
         document.write('No canvas support!');
         return;
     }
+
+    // Canvas stuff
 
     const ctx = canvas.getContext('2d');
 
@@ -99,6 +151,8 @@
 
     const redraw = () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.lineWidth = lineWidth;
+        ctx.strokeStyle = "rgb(200, 200, 200)"
 
         for (let i = 0; i < actions.length; i++) {
             const [[x, y], type] = actions[i];
@@ -127,17 +181,20 @@
 
     /** @type {(ev: MouseEvent) => Point} */
     const pointMouse = (ev) => {
-        return [ev.clientX - bounds.left, ev.clientY - bounds.top];
+        const [left, top] = bounds;
+        return [ev.clientX - left, ev.clientY - top];
     };
 
     /** @type {(ev: TouchEvent) => Point} */
     const pointTouch = (ev) => {
+        const [left, top] = bounds;
+
         if (!ev.touches.length)
             return [0, 0];
 
         const touch = ev.touches[0];
 
-        return [touch.clientX - bounds.left, touch.clientY - bounds.top];
+        return [touch.clientX - left, touch.clientY - top];
     };
 
     /** @type {(p: Point) => void} */
@@ -154,7 +211,7 @@
         const [x2, y2] = prev;
         const dist = ((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5;
 
-        if (penIsDown && dist > 10) {
+        if (penIsDown && dist > 5) {
             prev = p;
             actions.push([p, 1]);
             redraw();

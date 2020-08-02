@@ -26,13 +26,13 @@ export async function apply(env: Environment) {
             return;
         }
 
-        const canvas = createCanvas(500, 500);
+        const canvas = createCanvas(1000, 1000);
         const ctx = canvas.getContext('2d');
 
         ctx.fillStyle = 'white';
         ctx.strokeStyle = 'black';
 
-        ctx.fillRect(0, 0, 500, 500);
+        ctx.fillRect(0, 0, 1000, 1000);
 
         for (let i = 0; i < actions.length; i += 3) {
             const [x, y, type] = [actions[i], actions[i + 1], actions[i + 2]];
