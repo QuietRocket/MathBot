@@ -12,6 +12,9 @@
     /** @type {number} */
     let lineWidth;
 
+    /** @type {number[]} */
+    let actionBuffer = [];
+
     // Element declarations
 
     /** @type {HTMLCanvasElement} */
@@ -28,6 +31,9 @@
 
     /** @type {HTMLInputElement} */
     let slider;
+
+    /** @type {HTMLInputElement} */
+    let picker;
 
     // Element queries
 
@@ -46,12 +52,14 @@
     // @ts-ignore
     slider = document.getElementById('slider');
 
+    // @ts-ignore
+    picker = document.getElementById('picker');
+
     // Session definitions
 
     size = Math.min(window.innerHeight, window.innerWidth) - 10;
 
     canvas.width = canvas.height = size;
-
 
     const updateBounds = () => {
         const rect = canvas.getBoundingClientRect();
@@ -61,15 +69,21 @@
 
     updateBounds();
 
+    const updateLineWidth = () => {
+        lineWidth = slider.valueAsNumber;
+    };
+
+    updateLineWidth();
+
     // Events
     window.addEventListener('resize', updateBounds);
 
     window.addEventListener('scroll', updateBounds);
 
     undoButton.addEventListener('click', (ev) => {
-        for (let i = actions.length - 1; i >= 0; i--) {
-            const removed = actions.pop();
-            if (removed[1] === 0) { // Hit the start of a line.
+        for (let i = actionBuffer.length - 1; i >= 0; i--) {
+            const removed = actionBuffer.pop();
+            if (removed === -1) { // Hit the start of a line.
                 break;
             }
         }
@@ -77,52 +91,18 @@
     });
 
     clearButton.addEventListener('click', (ev) => {
-        actions = [];
+        actionBuffer = [];
         redraw();
-    });
-
-    sendButton.addEventListener('click', async (ev) => {
-        /** @type {number[]} */
-        const out = [];
-
-        actions.forEach(([[x, y], t]) => out.push(x, y, t));
-
-        const body = JSON.stringify(out);
-
-        const res = await fetch('/submitDrawing', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body
-        });
-
-        /** @type {string} */
-        let text;
-
-        try {
-            text = await res.text();
-        } catch (e) {
-            alert(e);
-        }
-
-        if (text === 'OK') {
-            alert('Sent successfully.');
-            actions = [];
-            redraw();
-        }
     });
 
     slider.addEventListener('change', (ev) => {
-        lineWidth = computeLineWidth();
+        updateLineWidth();
         redraw();
     });
 
-    /** @type {() => number} */
-    const computeLineWidth = () => {
-        const num = slider.valueAsNumber;
-        return size / 2 * num / 100;
-    };
+    // picker.addEventListener('change', (ev) => {
+    //     console.log(picker.value);
+    // });
 
     if (!canvas.getContext) {
         document.write('No canvas support!');
@@ -135,14 +115,12 @@
 
     /** @typedef {[number, number]} Point */
 
-    /** @typedef {[Point, number]} LineAction
-     * 0: pen down
-     * 1: pen move
-     * 2: pen up
+    /*
+     * -1: pen down
+     * -2: pen move
+     * -3: pen up
+     * -4: line width
      */
-
-    /** @type {LineAction[]} */
-    let actions = [];
 
     /** @type {Point} */
     let prev = [0, 0];
@@ -150,33 +128,64 @@
     let penIsDown = false;
 
     const redraw = () => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.lineWidth = lineWidth;
-        ctx.strokeStyle = "rgb(200, 200, 200)"
+        ctx.clearRect(0, 0, size, size);
 
-        for (let i = 0; i < actions.length; i++) {
-            const [[x, y], type] = actions[i];
+        if (actionBuffer.length === 0)
+            return;
+
+        let lastStroked = false;
+
+        let i = 0;
+        while (i < actionBuffer.length) {
+            const type = actionBuffer[i];
 
             switch (type) {
-                case 0: // down
-                    ctx.beginPath();
-                    ctx.moveTo(x, y);
+                case -1: // down
+                    {
+                        const [x, y] = [actionBuffer[i + 1], actionBuffer[i + 2]];
+                        i += 2;
+                        ctx.beginPath();
+                        ctx.moveTo(x, y);
+                        lastStroked = false;
+                    };
                     break;
-                case 1: // move
-                    ctx.lineTo(x, y);
+                case -2: // move
+                    {
+                        const [x, y] = [actionBuffer[i + 1], actionBuffer[i + 2]];
+                        i += 2;
+                        ctx.lineTo(x, y);
+                    };
                     break;
-                case 2: // up
-                    ctx.stroke();
+                case -3: // up
+                    {
+                        const [x, y] = [actionBuffer[i + 1], actionBuffer[i + 2]];
+                        i += 2;
+                        ctx.lineTo(x, y);
+                        ctx.stroke();
+                        lastStroked = true;
+
+                        console.log(actionBuffer);
+                    };
+                    break;
+                case -4: // line width
+                    {
+                        const value = actionBuffer[i + 1];
+                        i += 1;
+                        ctx.lineWidth = value;
+                    }
+                    break;
+                default:
+                    {
+                        alert('Something went wrong!');
+                    };
                     break;
             };
+
+            i++;
         }
 
-        if (actions.length > 0) {
-            const [[_x, _y], type] = actions[actions.length - 1];
-            if (type !== 2) {
-                ctx.stroke();
-            }
-        }
+        if (!lastStroked)
+            ctx.stroke();
     };
 
     /** @type {(ev: MouseEvent) => Point} */
@@ -201,7 +210,9 @@
     const penDown = (p) => {
         penIsDown = true;
 
-        actions.push([p, 0]);
+        actionBuffer.push(-4, lineWidth);
+        actionBuffer.push(-1, ...p);
+
         redraw();
     };
 
@@ -213,48 +224,52 @@
 
         if (penIsDown && dist > 5) {
             prev = p;
-            actions.push([p, 1]);
+            actionBuffer.push(-2, ...p);
             redraw();
         }
     };
 
-    /** @type {() => void} */
-    const penUp = () => {
+    /** @type {(p: Point) => void} */
+    const penUp = (p) => {
         penIsDown = false;
 
-        actions.push([[0, 0], 2]);
+        actionBuffer.push(-3, ...p);
+
         redraw();
     };
 
-    canvas.addEventListener('touchstart', (ev) => {
-        penDown(pointTouch(ev));
+    // Canvas events
+    {
+        canvas.addEventListener('touchstart', (ev) => {
+            penDown(pointTouch(ev));
 
-        ev.preventDefault();
-    });
+            ev.preventDefault();
+        });
 
-    canvas.addEventListener('touchmove', (ev) => {
-        penMove(pointTouch(ev));
+        canvas.addEventListener('touchmove', (ev) => {
+            penMove(pointTouch(ev));
 
-        ev.preventDefault();
-    });
+            ev.preventDefault();
+        });
 
-    canvas.addEventListener('touchend', (ev) => {
-        penUp();
+        canvas.addEventListener('touchend', (ev) => {
+            penUp(pointTouch(ev));
 
-        ev.preventDefault();
-    });
+            ev.preventDefault();
+        });
 
-    canvas.addEventListener('mousedown', (ev) => {
-        penDown(pointMouse(ev));
-    });
+        canvas.addEventListener('mousedown', (ev) => {
+            penDown(pointMouse(ev));
+        });
 
-    canvas.addEventListener('mousemove', (ev) => {
-        penMove(pointMouse(ev));
-    });
+        canvas.addEventListener('mousemove', (ev) => {
+            penMove(pointMouse(ev));
+        });
 
-    canvas.addEventListener('mouseup', (ev) => {
-        penUp();
-    });
+        canvas.addEventListener('mouseup', (ev) => {
+            penUp(pointMouse(ev));
+        });
+    };
 
     document.body.appendChild(canvas);
 })();
