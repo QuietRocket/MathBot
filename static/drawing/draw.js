@@ -89,8 +89,10 @@
 
     updateColor();
 
+    const roundFactor = 1000;
+
     /** @type {(i: number) => number} */
-    const normalize = (i) => i / size;
+    const normalize = (i) => Math.floor(i / size * roundFactor) / roundFactor;
 
     /** @type {(i: number) => number} */
     const specialize = (i) => i * size;
