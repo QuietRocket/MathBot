@@ -12,6 +12,9 @@
     /** @type {number} */
     let lineWidth;
 
+    /** @type {string} */
+    let colorString;
+
     /** @type {number[]} */
     let actionBuffer = [];
 
@@ -58,7 +61,7 @@
     // Session definitions
 
     const updateSize = () => {
-        size = Math.min(window.innerHeight, window.innerWidth) - 10;
+        size = Math.min(window.innerHeight, window.innerWidth) - 50;
         canvas.width = canvas.height = size;
     };
 
@@ -66,7 +69,6 @@
 
     const updateBounds = () => {
         const rect = canvas.getBoundingClientRect();
-
         bounds = [rect.left, rect.top];
     };
 
@@ -77,6 +79,12 @@
     };
 
     updateLineWidth();
+
+    const updateColor = () => {
+        colorString = picker.value;
+    };
+
+    updateColor();
 
     /** @type {(i: number) => number} */
     const normalize = (i) => i / size;
@@ -110,12 +118,11 @@
 
     slider.addEventListener('change', (ev) => {
         updateLineWidth();
-        redraw();
     });
 
-    // picker.addEventListener('change', (ev) => {
-    //     console.log(picker.value);
-    // });
+    picker.addEventListener('change', (ev) => {
+        updateColor();
+    });
 
     if (!canvas.getContext) {
         document.write('No canvas support!');
@@ -189,6 +196,21 @@
                             ctx.lineWidth = target + 10 * norm;
                         };
                         break;
+                    case -5: // color
+                        {
+                            /** @type {string} */
+                            let color;
+                            const raw = actionBuffer[i];
+                            if (raw === 0) {
+                                color = '#000';
+                            } else {
+                                color = '#' + actionBuffer[i].toString(16);
+                            }
+                            console.log(color);
+                            i += 1;
+                            ctx.strokeStyle = color;
+                        };
+                        break;
                     default:
                         {
                             alert('Something went wrong!');
@@ -226,6 +248,7 @@
 
         actionBuffer.push(-1, ...p.map(normalize));
         actionBuffer.push(-4, lineWidth);
+        actionBuffer.push(-5, parseInt(colorString.replace('#', '0x')));
         
         redraw();
     };
