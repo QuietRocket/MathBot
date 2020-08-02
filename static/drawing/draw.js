@@ -138,50 +138,51 @@
         let i = 0;
         while (i < actionBuffer.length) {
             const type = actionBuffer[i];
-
-            switch (type) {
-                case -1: // down
-                    {
-                        const [x, y] = [actionBuffer[i + 1], actionBuffer[i + 2]];
-                        i += 2;
-                        ctx.beginPath();
-                        ctx.moveTo(x, y);
-                        lastStroked = false;
-                    };
-                    break;
-                case -2: // move
-                    {
-                        const [x, y] = [actionBuffer[i + 1], actionBuffer[i + 2]];
-                        i += 2;
-                        ctx.lineTo(x, y);
-                    };
-                    break;
-                case -3: // up
-                    {
-                        const [x, y] = [actionBuffer[i + 1], actionBuffer[i + 2]];
-                        i += 2;
-                        ctx.lineTo(x, y);
-                        ctx.stroke();
-                        lastStroked = true;
-
-                        console.log(actionBuffer);
-                    };
-                    break;
-                case -4: // line width
-                    {
-                        const value = actionBuffer[i + 1];
-                        i += 1;
-                        ctx.lineWidth = value;
-                    }
-                    break;
-                default:
-                    {
-                        alert('Something went wrong!');
-                    };
-                    break;
-            };
-
             i++;
+
+            if (type <= -1 && type >= -3) {
+                const [x, y] = [actionBuffer[i], actionBuffer[i + 1]];
+                i += 2;
+
+                switch (type) {
+                    case -1: // down
+                        {
+                            ctx.beginPath();
+                            ctx.moveTo(x, y);
+                            lastStroked = false;
+                        };
+                        break;
+                    case -2: // move
+                        {
+                            ctx.lineTo(x, y);
+                        };
+                        break;
+                    case -3: // up
+                        {
+                            ctx.lineTo(x, y);
+                            ctx.stroke();
+                            lastStroked = true;
+                        };
+                        break;
+                }
+            } else {
+                switch (type) {
+                    case -4: // line width
+                        {
+                            const value = actionBuffer[i];
+                            i += 1;
+                            const norm = (value - 50) / 50;
+                            const target = size / 75;
+                            ctx.lineWidth = target + 10 * norm;
+                        };
+                        break;
+                    default:
+                        {
+                            alert('Something went wrong!');
+                        };
+                        break;
+                };
+            }
         }
 
         if (!lastStroked)
@@ -210,9 +211,9 @@
     const penDown = (p) => {
         penIsDown = true;
 
-        actionBuffer.push(-4, lineWidth);
         actionBuffer.push(-1, ...p);
-
+        actionBuffer.push(-4, lineWidth);
+        
         redraw();
     };
 
