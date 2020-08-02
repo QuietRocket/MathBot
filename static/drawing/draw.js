@@ -116,6 +116,27 @@
         redraw();
     });
 
+    sendButton.addEventListener('click', async (ev) => {
+        const body = JSON.stringify(actionBuffer);
+
+        const res = await fetch('/submitDrawing', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body
+        });
+
+        if (res.status === 200) {
+            alert('Successfully sent!');
+            actionBuffer = [];
+            redraw();
+        } else {
+            const error = await res.text();
+            alert(`${res.status}: ${error}`);
+        }
+    });
+
     slider.addEventListener('change', (ev) => {
         updateLineWidth();
     });
@@ -206,7 +227,6 @@
                             } else {
                                 color = '#' + actionBuffer[i].toString(16);
                             }
-                            console.log(color);
                             i += 1;
                             ctx.strokeStyle = color;
                         };
@@ -249,7 +269,7 @@
         actionBuffer.push(-1, ...p.map(normalize));
         actionBuffer.push(-4, lineWidth);
         actionBuffer.push(-5, parseInt(colorString.replace('#', '0x')));
-        
+
         redraw();
     };
 
