@@ -61,7 +61,11 @@ export async function apply(env: Environment) {
 
     client
         .on('message', async (msg) => {
-            if (!(msg.channel instanceof DMChannel) || msg.author.bot)
+            if (
+                !(msg.channel instanceof DMChannel) ||
+                msg.author.bot ||
+                msg.content.startsWith('!')
+            )
                 return;
 
             const verify = await msg.channel.send(config.confess.messageVerify);
