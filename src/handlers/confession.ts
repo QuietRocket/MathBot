@@ -122,8 +122,13 @@ export async function apply(env: Environment) {
                 await modifyHistory(msg, ACTION.REJECTED, user.username);
                 await msg.react(emojis.undo);
             } else if (emoji === emojis.check) {
-                if (msg.content.length && msg.content.split('\n')[0].split(' ')[0] === ACTION.REJECTED)
-                    return;
+                if (msg.content.length) {
+                    const line = msg.content.split('\n')[0].split(' ')[0];
+                    if (
+                        line === ACTION.REJECTED || line == ACTION.ACCEPTED
+                    )
+                        return;
+                }
 
                 await modifyHistory(msg, ACTION.ACCEPTED, user.username);
                 const day = formatter.format(new Date());
