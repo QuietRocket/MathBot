@@ -64,7 +64,8 @@ export async function apply(env: Environment) {
             if (
                 !(msg.channel instanceof DMChannel) ||
                 msg.author.bot ||
-                msg.content.startsWith('!')
+                msg.content.startsWith('!') ||
+                msg.content.startsWith('/')
             )
                 return;
 

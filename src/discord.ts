@@ -7,6 +7,7 @@ import { Infinity, apply as infinity } from './handlers/infinity';
 import { Roles, apply as roles } from './handlers/role';
 import { Drawing, apply as drawing } from './handlers/drawings';
 import { Confesation, apply as confesation } from './handlers/confesation';
+import { Verify, apply as verify } from './handlers/verify';
 
 import { Express } from 'express';
 import { app as web } from './web';
@@ -19,6 +20,7 @@ export interface DiscordConfig {
     roles: Roles;
     drawing: Drawing;
     confesation: Confesation;
+    verify: Verify;
 };
 
 export interface Environment {
@@ -57,6 +59,7 @@ export const DiscordAgent = (config: DiscordConfig) => {
                 await roles(env);
                 await drawing(env);
                 await confesation(env);
+                await verify(env);
             });
 
             client.login(config.token);
