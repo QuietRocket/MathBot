@@ -1,5 +1,5 @@
 import { Environment } from '../discord';
-import { DMChannel, Guild } from 'discord.js';
+import { DMChannel, Role } from 'discord.js';
 import { Router } from 'express';
 import { randomBytes, createHmac } from 'crypto';
 
@@ -7,6 +7,7 @@ export interface Verify {
     handler: (token: string) => string;
     script: (token: string) => string;
     secret: string;
+    role: string;
 };
 
 export async function apply(env: Environment) {
@@ -18,6 +19,10 @@ export async function apply(env: Environment) {
         },
         verify: 'verify'
     };
+
+    let verifyRole = guild.roles.resolve(config.verify.role) as Role;
+    if (verifyRole === null)
+        throw Error('Couldn\'t resolve verify role.');
 
     client.on('message', async (msg) => {
         if (
@@ -42,7 +47,7 @@ export async function apply(env: Environment) {
 
         await redis.set(rKeys.verifySession(token), userId, 'EX', timeout);
 
-        await msg.channel.send(`Please visit the following URL: ${config.verify.handler(token)}`);
+        await msg.channel.send(`Please click the following link to verify: ${config.verify.handler(token)}`);
     });
 
     const router = Router();
@@ -87,7 +92,7 @@ export async function apply(env: Environment) {
 
         const ids = await redis.hvals(rKeys.verify);
         if (ids.indexOf(userId) !== -1)
-            return error('This ID was already used to verify an account. If you think this is a mistake, please contact an admin on discord.');
+            return error('This ID was already used to verify an account. If you think this is a mistake, please contact the admin on discord.');
 
         await redis.del(sessionId);
         await redis.hset(rKeys.verify, userId, idString);
@@ -97,6 +102,7 @@ export async function apply(env: Environment) {
             return error('User not found.');
 
         guildMember.send(`You have successfully verified!`);
+        guildMember.roles.add(verifyRole);
 
         res.send('Successfully verified.');
     });
