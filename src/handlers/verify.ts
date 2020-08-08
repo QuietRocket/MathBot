@@ -38,6 +38,10 @@ export async function apply(env: Environment) {
 
         if (verified !== null) {
             await msg.channel.send('You\'re already verified!');
+            const guildMember = guild.member(userId);
+            if (guildMember !== null) {
+                await guildMember.roles.add(verifyRole);
+            }
             return;
         }
 
