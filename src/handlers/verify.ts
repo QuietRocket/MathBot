@@ -1,7 +1,7 @@
 import { Environment } from '../discord';
 import { DMChannel, Role } from 'discord.js';
 import { Router } from 'express';
-import { randomBytes, createHmac } from 'crypto';
+import { randomBytes, createHmac, createHash } from 'crypto';
 
 export interface Verify {
     handler: (token: string) => string;
@@ -93,19 +93,22 @@ export async function apply(env: Environment) {
 
         if (userId === null)
             return error('The token is invalid.');
+        
+        await redis.del(sessionId);
+
+        const hashedId = createHash('md5').update(idString).digest('hex');
 
         const ids = await redis.hvals(rKeys.verify);
-        if (ids.indexOf(userId) !== -1)
+        if (ids.indexOf(hashedId) !== -1)
             return error('This ID was already used to verify an account. If you think this is a mistake, please contact the admin on discord.');
 
-        await redis.del(sessionId);
-        await redis.hset(rKeys.verify, userId, idString);
+        await redis.hset(rKeys.verify, userId, hashedId);
 
         const guildMember = guild.member(userId);
         if (guildMember === null)
             return error('User not found.');
 
-        guildMember.send(`You have successfully verified!`);
+        guildMember.send('You have successfully verified!');
         guildMember.roles.add(verifyRole);
 
         res.send('Successfully verified.');
