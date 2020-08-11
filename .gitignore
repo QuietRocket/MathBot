@@ -1,4 +1,5 @@
 node_modules
-.vscode
-output
+config.ts
 .DS_Store
+.vscode
+.vsls.json
