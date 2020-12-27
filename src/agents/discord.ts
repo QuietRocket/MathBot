@@ -72,8 +72,8 @@ export const DiscordAgent = async (config: DiscordConfig, debug?: boolean) => {
             timeout = setTimeout(() => pruneMap(), 1000 * 60 * config.pruneInterval);
     }
 
-    const handleMessage = async (content: string): Promise<MessageOptions | string | null> => {
-        let reply: MessageOptions | string | null = null;
+    const handleMessage = async (content: string): Promise<(MessageOptions & { split?: false }) | string | null> => {
+        let reply: (MessageOptions & { split?: false }) | string | null = null;
 
         const matches = content.matchAll(/\$(.+?)\$/g);
         const expressions = Array.from(matches).map((match) => match[1]);
@@ -154,7 +154,7 @@ export const DiscordAgent = async (config: DiscordConfig, debug?: boolean) => {
         confessionCounter = 1;
     };
 
-    const modifyHistory = async (msg: Message, action: ACTION, author?: string) => {
+    const modifyHistory = async (msg: Message, action: ACTION, author: string | null) => {
         await msg.edit(`${action} by ${author || 'Unknown'}\n${msg.content}`);
     };
 
